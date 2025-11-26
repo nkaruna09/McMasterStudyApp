@@ -50,7 +50,7 @@ export const HomeScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Study Place Finder</Text>
+        <Text style={styles.title}>McMaster Study Places</Text>
         <Text style={styles.subtitle}>
           Discover the perfect study spot on campus
         </Text>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,37 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/colors';
 import { useApp } from '../context/AppContext';
+import { WriteReviewModal } from '../components/WriteReviewModal';
 
 const { width } = Dimensions.get('window');
 
 export const PlaceDetailModal = ({ place, visible, onClose }) => {
-  const { favorites, toggleFavorite } = useApp();
+  const { favorites, toggleFavorite, addReview, getReviewsForPlace, getReviewCount } = useApp();
+  const [showWriteReview, setShowWriteReview] = useState(false);
 
   if (!place) return null;
 
   const isFavorite = favorites.includes(place.id);
+  const userReviews = getReviewsForPlace(place.id);
+  const totalReviews = place.reviews + getReviewCount(place.id);
+
+  const handleSubmitReview = (review) => {
+    addReview(place.id, review);
+    setShowWriteReview(false);
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
 
   const renderStars = (rating) => {
     return (
@@ -38,203 +60,243 @@ export const PlaceDetailModal = ({ place, visible, onClose }) => {
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="chevron-down" size={28} color={colors.darkGray} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Hero Image */}
-          <View
-            style={[
-              styles.heroImage,
-              {
-                backgroundColor:
-                  place.type === 'Library' ? colors.maroon : colors.gold,
-              },
-            ]}
-          >
-            <Ionicons
-              name={place.type === 'Library' ? 'book' : 'cafe'}
-              size={80}
-              color="white"
-            />
-          </View>
-
-          <ScrollView style={styles.scrollContent}>
-            {/* Title and Favorite */}
-            <View style={styles.titleRow}>
-              <Text style={styles.title}>{place.name}</Text>
-              <TouchableOpacity
-                onPress={() => toggleFavorite(place.id)}
-                style={styles.favoriteButton}
-              >
-                <Ionicons
-                  name={isFavorite ? 'heart' : 'heart-outline'}
-                  size={32}
-                  color={colors.maroon}
-                />
+    <>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="chevron-down" size={28} color={colors.darkGray} />
               </TouchableOpacity>
             </View>
 
-            {/* Rating */}
-            <View style={styles.ratingRow}>
-              {renderStars(place.rating)}
-              <Text style={styles.reviewCount}>
-                ({place.reviews} reviews)
-              </Text>
+            {/* Hero Image */}
+            <View
+              style={[
+                styles.heroImage,
+                {
+                  backgroundColor:
+                    place.type === 'Library' ? colors.maroon : colors.gold,
+                },
+              ]}
+            >
+              <Ionicons
+                name={place.type === 'Library' ? 'book' : 'cafe'}
+                size={80}
+                color="white"
+              />
             </View>
 
-            {/* Location */}
-            <View style={styles.infoRow}>
-              <Ionicons name="location" size={20} color={colors.maroon} />
-              <Text style={styles.infoText}>{place.location}</Text>
-            </View>
-
-            {/* Hours */}
-            <View style={styles.infoRow}>
-              <Ionicons name="time" size={20} color={colors.maroon} />
-              <Text style={styles.infoText}>{place.hours}</Text>
-            </View>
-
-            {/* Description */}
-            <Text style={styles.description}>{place.description}</Text>
-
-            {/* Environment Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Study Environment</Text>
-              <View style={styles.environmentGrid}>
-                <View style={styles.environmentCard}>
+            <ScrollView style={styles.scrollContent}>
+              {/* Title and Favorite */}
+              <View style={styles.titleRow}>
+                <Text style={styles.title}>{place.name}</Text>
+                <TouchableOpacity
+                  onPress={() => toggleFavorite(place.id)}
+                  style={styles.favoriteButton}
+                >
                   <Ionicons
-                    name="volume-medium"
-                    size={24}
+                    name={isFavorite ? 'heart' : 'heart-outline'}
+                    size={32}
                     color={colors.maroon}
                   />
-                  <Text style={styles.environmentLabel}>Noise Level</Text>
-                  <Text style={styles.environmentValue}>{place.noiseLevel}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Rating */}
+              <View style={styles.ratingRow}>
+                {renderStars(place.rating)}
+                <Text style={styles.reviewCount}>
+                  ({totalReviews} reviews)
+                </Text>
+              </View>
+
+              {/* Location */}
+              <View style={styles.infoRow}>
+                <Ionicons name="location" size={20} color={colors.maroon} />
+                <Text style={styles.infoText}>{place.location}</Text>
+              </View>
+
+              {/* Hours */}
+              <View style={styles.infoRow}>
+                <Ionicons name="time" size={20} color={colors.maroon} />
+                <Text style={styles.infoText}>{place.hours}</Text>
+              </View>
+
+              {/* Description */}
+              <Text style={styles.description}>{place.description}</Text>
+
+              {/* Environment Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Study Environment</Text>
+                <View style={styles.environmentGrid}>
+                  <View style={styles.environmentCard}>
+                    <Ionicons
+                      name="volume-medium"
+                      size={24}
+                      color={colors.maroon}
+                    />
+                    <Text style={styles.environmentLabel}>Noise Level</Text>
+                    <Text style={styles.environmentValue}>{place.noiseLevel}</Text>
+                  </View>
+                  <View style={styles.environmentCard}>
+                    <Ionicons name="people" size={24} color={colors.maroon} />
+                    <Text style={styles.environmentLabel}>Crowdedness</Text>
+                    <Text style={styles.environmentValue}>
+                      {place.crowdedness}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.environmentCard}>
-                  <Ionicons name="people" size={24} color={colors.maroon} />
-                  <Text style={styles.environmentLabel}>Crowdedness</Text>
-                  <Text style={styles.environmentValue}>
-                    {place.crowdedness}
+              </View>
+
+              {/* Amenities Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Amenities</Text>
+                <View style={styles.amenitiesContainer}>
+                  {place.amenities.map((amenity) => (
+                    <View key={amenity} style={styles.amenityTag}>
+                      <Text style={styles.amenityText}>{amenity}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Quick Features */}
+              <View style={styles.section}>
+                <View style={styles.featuresRow}>
+                  {place.hasWifi && (
+                    <View style={styles.featureItem}>
+                      <Ionicons name="wifi" size={20} color={colors.maroon} />
+                      <Text style={styles.featureText}>WiFi</Text>
+                    </View>
+                  )}
+                  {place.hasPowerOutlets && (
+                    <View style={styles.featureItem}>
+                      <Ionicons name="flash" size={20} color={colors.maroon} />
+                      <Text style={styles.featureText}>Outlets</Text>
+                    </View>
+                  )}
+                  {place.nearFood && (
+                    <View style={styles.featureItem}>
+                      <Ionicons
+                        name="fast-food"
+                        size={20}
+                        color={colors.maroon}
+                      />
+                      <Text style={styles.featureText}>Food Nearby</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Reviews Section */}
+              <View style={styles.section}>
+                <View style={styles.reviewsHeader}>
+                  <Text style={styles.sectionTitle}>
+                    Reviews ({totalReviews})
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.writeReviewButton}
+                    onPress={() => setShowWriteReview(true)}
+                  >
+                    <Ionicons name="create" size={18} color={colors.maroon} />
+                    <Text style={styles.writeReviewButtonText}>Write Review</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {/* User-submitted reviews */}
+                {userReviews.map((review) => (
+                  <View key={review.id} style={[styles.reviewCard, styles.userReviewCard]}>
+                    <View style={styles.reviewHeader}>
+                      <View>
+                        {renderStars(review.rating)}
+                        <Text style={styles.reviewAuthor}>{review.userName}</Text>
+                      </View>
+                      <View style={styles.newBadge}>
+                        <Text style={styles.newBadgeText}>NEW</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.reviewDate}>{formatDate(review.date)}</Text>
+                    <Text style={styles.reviewText}>{review.text}</Text>
+                  </View>
+                ))}
+
+                {/* Sample/existing reviews */}
+                <View style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    {renderStars(5)}
+                    <Text style={styles.reviewDate}>2 days ago</Text>
+                  </View>
+                  <Text style={styles.reviewText}>
+                    Perfect spot for studying! Very quiet and plenty of outlets.
+                    The atmosphere is great for concentration.
+                  </Text>
+                </View>
+
+                <View style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    {renderStars(4)}
+                    <Text style={styles.reviewDate}>1 week ago</Text>
+                  </View>
+                  <Text style={styles.reviewText}>
+                    Great atmosphere but can get crowded during exam season.
+                    Would recommend arriving early to secure a spot.
+                  </Text>
+                </View>
+
+                <View style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    {renderStars(5)}
+                    <Text style={styles.reviewDate}>2 weeks ago</Text>
+                  </View>
+                  <Text style={styles.reviewText}>
+                    Excellent lighting and comfortable seating. One of my favorite
+                    places to study on campus.
                   </Text>
                 </View>
               </View>
-            </View>
 
-            {/* Amenities Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Amenities</Text>
-              <View style={styles.amenitiesContainer}>
-                {place.amenities.map((amenity) => (
-                  <View key={amenity} style={styles.amenityTag}>
-                    <Text style={styles.amenityText}>{amenity}</Text>
-                  </View>
-                ))}
+              {/* Action Buttons */}
+              <View style={styles.actionButtons}>
+                <TouchableOpacity 
+                  style={styles.primaryButton}
+                  onPress={() => setShowWriteReview(true)}
+                >
+                  <Ionicons name="create" size={20} color="white" />
+                  <Text style={styles.primaryButtonText}>Write a Review</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.secondaryButton}>
+                  <Ionicons name="notifications" size={20} color={colors.maroon} />
+                  <Text style={styles.secondaryButtonText}>
+                    Notify when available
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.secondaryButton}>
+                  <Ionicons name="share-social" size={20} color={colors.maroon} />
+                  <Text style={styles.secondaryButtonText}>Share Location</Text>
+                </TouchableOpacity>
               </View>
-            </View>
-
-            {/* Quick Features */}
-            <View style={styles.section}>
-              <View style={styles.featuresRow}>
-                {place.hasWifi && (
-                  <View style={styles.featureItem}>
-                    <Ionicons name="wifi" size={20} color={colors.maroon} />
-                    <Text style={styles.featureText}>WiFi</Text>
-                  </View>
-                )}
-                {place.hasPowerOutlets && (
-                  <View style={styles.featureItem}>
-                    <Ionicons name="flash" size={20} color={colors.maroon} />
-                    <Text style={styles.featureText}>Outlets</Text>
-                  </View>
-                )}
-                {place.nearFood && (
-                  <View style={styles.featureItem}>
-                    <Ionicons
-                      name="fast-food"
-                      size={20}
-                      color={colors.maroon}
-                    />
-                    <Text style={styles.featureText}>Food Nearby</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Reviews Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Recent Reviews ({place.reviews})
-              </Text>
-              
-              <View style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  {renderStars(5)}
-                  <Text style={styles.reviewDate}>2 days ago</Text>
-                </View>
-                <Text style={styles.reviewText}>
-                  Perfect spot for studying! Very quiet and plenty of outlets.
-                  The atmosphere is great for concentration.
-                </Text>
-              </View>
-
-              <View style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  {renderStars(4)}
-                  <Text style={styles.reviewDate}>1 week ago</Text>
-                </View>
-                <Text style={styles.reviewText}>
-                  Great atmosphere but can get crowded during exam season.
-                  Would recommend arriving early to secure a spot.
-                </Text>
-              </View>
-
-              <View style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  {renderStars(5)}
-                  <Text style={styles.reviewDate}>2 weeks ago</Text>
-                </View>
-                <Text style={styles.reviewText}>
-                  Excellent lighting and comfortable seating. One of my favorite
-                  places to study on campus.
-                </Text>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.primaryButton}>
-                <Ionicons name="create" size={20} color="white" />
-                <Text style={styles.primaryButtonText}>Write a Review</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.secondaryButton}>
-                <Ionicons name="notifications" size={20} color={colors.maroon} />
-                <Text style={styles.secondaryButtonText}>
-                  Notify when available
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.secondaryButton}>
-                <Ionicons name="share-social" size={20} color={colors.maroon} />
-                <Text style={styles.secondaryButtonText}>Share Location</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Write Review Modal */}
+      <WriteReviewModal
+        visible={showWriteReview}
+        onClose={() => setShowWriteReview(false)}
+        placeName={place.name}
+        onSubmit={handleSubmitReview}
+      />
+    </>
   );
 };
 
@@ -381,11 +443,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.darkGray,
   },
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  writeReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.maroon,
+  },
+  writeReviewButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.maroon,
+  },
   reviewCard: {
     backgroundColor: colors.lightGray,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
+  },
+  userReviewCard: {
+    backgroundColor: '#FFF9E6',
+    borderWidth: 2,
+    borderColor: colors.gold,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -393,14 +481,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  reviewAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.maroon,
+    marginTop: 4,
+  },
   reviewDate: {
     fontSize: 12,
     color: colors.darkGray,
+    marginBottom: 8,
   },
   reviewText: {
     fontSize: 14,
     lineHeight: 20,
     color: colors.darkGray,
+  },
+  newBadge: {
+    backgroundColor: colors.maroon,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  newBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: 'white',
   },
   actionButtons: {
     marginTop: 24,
