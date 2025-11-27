@@ -59,12 +59,46 @@ export const AppProvider = ({ children }) => {
     return (sum / placeReviews.length).toFixed(1);
   };
 
+  // Study sessions state
+  const [studySessions, setStudySessions] = useState([]);
+
+  // Add a study session
+  const addStudySession = (session) => {
+    setStudySessions(prev => [session, ...prev]);
+  };
+
+  // Get study statistics
+  const getStudyStats = () => {
+    const totalSessions = studySessions.length;
+    const totalSeconds = studySessions.reduce((sum, session) => sum + session.duration, 0);
+    const totalHours = (totalSeconds / 3600).toFixed(1);
+    const totalPomodoros = studySessions.reduce((sum, session) => sum + (session.pomodoroCount || 0), 0);
+    
+    // Find most frequent location
+    const locationCounts = {};
+    studySessions.forEach(session => {
+      locationCounts[session.locationName] = (locationCounts[session.locationName] || 0) + 1;
+    });
+    
+    const favoriteLocation = Object.keys(locationCounts).length > 0
+      ? Object.keys(locationCounts).reduce((a, b) => locationCounts[a] > locationCounts[b] ? a : b)
+      : null;
+
+    return {
+      totalSessions,
+      totalHours,
+      totalPomodoros,
+      favoriteLocation: favoriteLocation ? favoriteLocation.split('-')[0].substring(0, 15) + '...' : 'N/A',
+    };
+  };
+
   return (
     <AppContext.Provider value={{
       favorites,
       visited,
       filters,
       reviews,
+      studySessions,
       setFilters,
       toggleFavorite,
       addVisited,
@@ -72,6 +106,8 @@ export const AppProvider = ({ children }) => {
       getReviewsForPlace,
       getReviewCount,
       getAverageRating,
+      addStudySession,
+      getStudyStats,
     }}>
       {children}
     </AppContext.Provider>
